@@ -12,3 +12,4 @@ torch
 pypdf
 huggingface-hub
 gunicorn
+flask-cors
