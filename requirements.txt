@@ -11,3 +11,4 @@ tokenizers
 torch
 pypdf
 huggingface-hub
+gunicorn
