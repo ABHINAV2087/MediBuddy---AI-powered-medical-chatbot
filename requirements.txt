@@ -1,0 +1,13 @@
+Flask
+langchain
+langchain-community
+langchain-huggingface
+langchain-core
+python-dotenv
+faiss-cpu
+sentence-transformers
+transformers
+tokenizers
+torch
+pypdf
+huggingface-hub
