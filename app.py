@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-CORS(app, origins=["http://localhost:3000", "http://localhost:3001", "*"])
+CORS(app, origins=["http://localhost:3000", "http://localhost:3001", "https://medibuddy-ai-powered-medical-chatbot.onrender.com"])
 
 class Config:
     DB_FAISS_PATH = os.environ.get("DB_FAISS_PATH", "vectorstore/db_faiss")
