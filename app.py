@@ -38,6 +38,11 @@ class RAGService:
     def initialize_vectorstore():
         global vectorstore
         try:
+            # Check if vectorstore path exists
+            if not os.path.exists(Config.DB_FAISS_PATH):
+                logger.error(f"❌ Vectorstore path does not exist: {Config.DB_FAISS_PATH}")
+                return False
+                
             embedding_model = HuggingFaceEmbeddings(model_name=Config.EMBEDDING_MODEL)
             vectorstore = FAISS.load_local(
                 Config.DB_FAISS_PATH, 
@@ -55,7 +60,8 @@ class RAGService:
         global llm
         try:
             if not Config.HF_TOKEN:
-                raise ValueError("HuggingFace token not found. Please set HF_TOKEN environment variable.")
+                logger.error("❌ HuggingFace token not found. Please set HF_TOKEN environment variable.")
+                return False
             
             os.environ["HUGGINGFACEHUB_API_TOKEN"] = Config.HF_TOKEN
             
@@ -149,6 +155,12 @@ def initialize_services():
     global is_initialized
     logger.info("🚀 Initializing RAG Services...")
     
+    # Log environment variables for debugging
+    logger.info(f"DB_FAISS_PATH: {Config.DB_FAISS_PATH}")
+    logger.info(f"HF_TOKEN set: {'Yes' if Config.HF_TOKEN else 'No'}")
+    logger.info(f"HUGGINGFACE_REPO_ID: {Config.HUGGINGFACE_REPO_ID}")
+    logger.info(f"EMBEDDING_MODEL: {Config.EMBEDDING_MODEL}")
+    
     vectorstore_ok = RAGService.initialize_vectorstore()
     llm_ok = RAGService.initialize_llm()
     
@@ -158,6 +170,7 @@ def initialize_services():
         logger.info("✅ All services initialized successfully!")
     else:
         logger.error("❌ Failed to initialize services")
+        logger.error(f"Vectorstore OK: {vectorstore_ok}, LLM OK: {llm_ok}")
     
     return is_initialized
 
@@ -173,6 +186,12 @@ def require_initialization(f):
     decorated_function.__name__ = f.__name__
     return decorated_function
 
+# Initialize services when the module is imported
+try:
+    initialize_services()
+except Exception as e:
+    logger.error(f"❌ Failed to initialize services on startup: {str(e)}")
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     return jsonify({
@@ -183,8 +202,33 @@ def health_check():
             'vectorstore_loaded': vectorstore is not None,
             'llm_loaded': llm is not None,
             'initialized': is_initialized
+        },
+        'config': {
+            'db_path_exists': os.path.exists(Config.DB_FAISS_PATH),
+            'hf_token_set': Config.HF_TOKEN is not None,
+            'db_faiss_path': Config.DB_FAISS_PATH
         }
     })
+
+@app.route('/api/init', methods=['POST'])
+def manual_init():
+    """Manual initialization endpoint for debugging"""
+    try:
+        success = initialize_services()
+        return jsonify({
+            'success': success,
+            'message': 'Initialization completed' if success else 'Initialization failed',
+            'services': {
+                'vectorstore_loaded': vectorstore is not None,
+                'llm_loaded': llm is not None,
+                'initialized': is_initialized
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/chat', methods=['POST'])
 @require_initialization
@@ -380,9 +424,11 @@ def internal_error(error):
     }), 500
 
 if __name__ == '__main__':
-    if not initialize_services():
-        logger.error("❌ Failed to initialize services. Exiting...")
-        exit(1)
+    # This will only run when script is executed directly
+    if not is_initialized:
+        if not initialize_services():
+            logger.error("❌ Failed to initialize services. Exiting...")
+            exit(1)
     
     logger.info("🚀 Starting Flask API server...")
     logger.info("📱 API available at: http://localhost:5000")
@@ -391,6 +437,7 @@ if __name__ == '__main__':
     logger.info("  - Chat: POST /api/chat")
     logger.info("  - Search: POST /api/search")
     logger.info("  - Config: GET /api/config")
+    logger.info("  - Manual Init: POST /api/init")
     
     app.run(
         debug=os.environ.get('FLASK_DEBUG', 'False').lower() == 'true',
