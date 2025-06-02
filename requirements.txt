@@ -14,7 +14,9 @@ huggingface-hub
 gunicorn
 flask-cors
 numpy
-
 requests
-
 urllib3
+tokenizers
+requests
+urllib3
+Flask-CORS

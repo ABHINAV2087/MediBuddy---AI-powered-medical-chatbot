@@ -1,24 +1,21 @@
 services:
   - type: web
-    name: medibuddy-flask-api
+    name: medibuddy-api
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app --timeout 120 --workers 1 --threads 2
+    buildCommand: chmod +x render_build.sh && ./render_build.sh
+    startCommand: python app.py
     envVars:
       - key: FLASK_ENV
         value: production
-      - key: FLASK_DEBUG
-        value: false
-      - key: ENABLE_FALLBACK_MODE
-        value: true
+      - key: FLASK_HOST
+        value: 0.0.0.0
+      - key: FLASK_PORT
+        value: 10000
+      - key: DB_FAISS_PATH
+        value: vectorstore/db_faiss
       - key: HUGGINGFACE_REPO_ID
-        value: microsoft/DialoGPT-medium
+        value: mistralai/Mixtral-8x7B-Instruct-v0.1
       - key: EMBEDDING_MODEL
         value: sentence-transformers/all-MiniLM-L6-v2
-      - key: MAX_SOURCES
-        value: 5
-      - key: MAX_CONTENT_LENGTH
-        value: 500
-      # Add your HuggingFace token as a secret environment variable in Render dashboard
-      # - key: HF_TOKEN
-      #   fromSecret: HF_TOKEN
+      - key: HF_TOKEN
+        sync: false  # You'll set this in Render dashboard
