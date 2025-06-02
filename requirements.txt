@@ -13,3 +13,8 @@ pypdf
 huggingface-hub
 gunicorn
 flask-cors
+numpy
+
+requests
+
+urllib3
