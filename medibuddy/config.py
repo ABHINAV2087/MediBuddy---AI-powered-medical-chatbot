@@ -4,8 +4,10 @@ from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
 class Config:
-    # Vectorstore configuration
-    DB_FAISS_PATH = os.environ.get("DB_FAISS_PATH", "vectorstore/db_faiss")
+    # Vectorstore configuration - changed to Pinecone
+    PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
+    PINECONE_ENVIRONMENT = os.environ.get("PINECONE_ENVIRONMENT", "gcp-starter")
+    PINECONE_INDEX_NAME = os.environ.get("PINECONE_INDEX_NAME", "medibuddy")
     EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
     
     # LLM configuration

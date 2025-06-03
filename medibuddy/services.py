@@ -1,21 +1,22 @@
 import os
 import logging
+from pinecone import Pinecone
+from functools import lru_cache
 from langchain_huggingface import HuggingFaceEmbeddings, HuggingFaceEndpoint
-from langchain_community.vectorstores import FAISS
+from langchain_pinecone import PineconeVectorStore
 from langchain_core.prompts import PromptTemplate
 from typing import Optional, Dict, Any
-
-# Add this import - adjust the path based on your project structure
-from medibuddy.config import Config  # or wherever your Config class is defined
+from medibuddy.config import Config
 
 logger = logging.getLogger(__name__)
 
 class RAGService:
     _instance = None
-    vectorstore = None
-    llm = None
+    vectorstore: Optional[PineconeVectorStore] = None
+    llm: Optional[HuggingFaceEndpoint] = None
     is_initialized = False
-
+    pc: Optional[Pinecone] = None  # Pinecone client instance
+   
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(RAGService, cls).__new__(cls)
@@ -24,49 +25,59 @@ class RAGService:
     @classmethod
     def initialize(cls):
         if cls.is_initialized:
+            logger.info("✅ RAGService already initialized")
             return True
 
         try:
+            # Initialize Pinecone client
+            cls.pc = Pinecone(api_key=Config.PINECONE_API_KEY)
+            
             # Initialize vectorstore
-            cls.initialize_vectorstore()
+            if not cls.initialize_vectorstore():
+                raise RuntimeError("Vectorstore initialization failed")
             
             # Initialize LLM
-            cls.initialize_llm()
+            if not cls.initialize_llm():
+                raise RuntimeError("LLM initialization failed")
             
             cls.is_initialized = cls.vectorstore is not None and cls.llm is not None
+            
+            if cls.is_initialized:
+                logger.info("✅ RAGService initialized successfully")
+            else:
+                logger.error("❌ RAGService initialization failed")
+            
             return cls.is_initialized
         except Exception as e:
-            logger.error(f"Failed to initialize RAGService: {str(e)}")
+            logger.error(f"❌ Failed to initialize RAGService: {str(e)}")
             cls.is_initialized = False
             return False
 
     @classmethod
     def initialize_vectorstore(cls):
         try:
+            if not Config.PINECONE_API_KEY:
+                raise ValueError("Pinecone API key not configured")
+            if not Config.PINECONE_INDEX_NAME:
+                raise ValueError("Pinecone index name not configured")
+
+            logger.info("Initializing Pinecone vectorstore...")
+            
             embedding_model = HuggingFaceEmbeddings(
                 model_name=Config.EMBEDDING_MODEL,
-                model_kwargs={'device': 'cpu'}
+                model_kwargs={'device': 'cpu'},
+                encode_kwargs={'normalize_embeddings': True}
             )
             
-            # Check if vectorstore path exists
-            if not os.path.exists(Config.DB_FAISS_PATH):
-                raise FileNotFoundError(f"Vectorstore path not found: {Config.DB_FAISS_PATH}")
-            
-            # Check for required files
-            required_files = ['index.faiss', 'index.pkl']
-            for file in required_files:
-                if not os.path.exists(os.path.join(Config.DB_FAISS_PATH, file)):
-                    raise FileNotFoundError(f"Required vectorstore file missing: {file}")
-
-            cls.vectorstore = FAISS.load_local(
-                Config.DB_FAISS_PATH, 
-                embedding_model, 
-                allow_dangerous_deserialization=True
+            cls.vectorstore = PineconeVectorStore.from_existing_index(
+                index_name=Config.PINECONE_INDEX_NAME,
+                embedding=embedding_model
             )
-            logger.info("✅ Vectorstore loaded successfully")
+            
+            logger.info("✅ Pinecone vectorstore loaded successfully")
             return True
         except Exception as e:
-            logger.error(f"❌ Error loading vectorstore: {str(e)}")
+            logger.error(f"❌ Error loading Pinecone vectorstore: {str(e)}")
             cls.vectorstore = None
             return False
 
@@ -74,7 +85,11 @@ class RAGService:
     def initialize_llm(cls):
         try:
             if not Config.HF_TOKEN:
-                raise ValueError("HuggingFace token not found in environment variables")
+                raise ValueError("HuggingFace token not configured")
+            if not Config.HUGGINGFACE_REPO_ID:
+                raise ValueError("HuggingFace repo ID not configured")
+
+            logger.info("Initializing LLM...")
             
             os.environ["HUGGINGFACEHUB_API_TOKEN"] = Config.HF_TOKEN
             
@@ -86,6 +101,7 @@ class RAGService:
                 top_p=0.95,
                 repetition_penalty=1.03
             )
+            
             logger.info("✅ LLM loaded successfully")
             return True
         except Exception as e:
@@ -94,6 +110,7 @@ class RAGService:
             return False
 
     @classmethod
+    @lru_cache(maxsize=1)
     def get_prompt_template(cls):
         template = """
         You are a medical assistant that provides accurate information based on the provided context.
@@ -120,3 +137,10 @@ class RAGService:
                 cleaned[key] = str(value).strip()
         
         return cleaned
+
+    @classmethod
+    def get_retriever(cls, k: int = 5):
+        """Get a retriever with configurable number of results"""
+        if not cls.vectorstore:
+            raise RuntimeError("Vectorstore not initialized")
+        return cls.vectorstore.as_retriever(search_kwargs={'k': k})
