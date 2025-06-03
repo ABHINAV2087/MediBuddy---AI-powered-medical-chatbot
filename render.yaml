@@ -1,21 +1,21 @@
 services:
   - type: web
     name: medibuddy-api
-    env: python
-    buildCommand: chmod +x render_build.sh && ./render_build.sh
-    startCommand: python app.py
+    runtime: python
+    buildCommand: |
+      chmod +x scripts/setup.sh
+      chmod +x scripts/build.sh
+      ./scripts/build.sh
+    startCommand: gunicorn app:app
     envVars:
-      - key: FLASK_ENV
-        value: production
-      - key: FLASK_HOST
-        value: 0.0.0.0
-      - key: FLASK_PORT
-        value: 10000
-      - key: DB_FAISS_PATH
-        value: vectorstore/db_faiss
+      - key: HF_TOKEN
+        fromGroup: hf_token
       - key: HUGGINGFACE_REPO_ID
         value: mistralai/Mixtral-8x7B-Instruct-v0.1
+      - key: DB_FAISS_PATH
+        value: vectorstore/db_faiss
       - key: EMBEDDING_MODEL
         value: sentence-transformers/all-MiniLM-L6-v2
-      - key: HF_TOKEN
-        sync: false  # You'll set this in Render dashboard
+      - key: CORS_ORIGINS
+        value: https://your-mern-app.onrender.com,http://localhost:3000
+    plan: free
