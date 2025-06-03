@@ -1,30 +1,26 @@
 from flask import Flask
 from flask_cors import CORS
-from .config import Config
-from .services import RAGService
 import logging
 
 def create_app():
     app = Flask(__name__)
     
     # Configure CORS
-    CORS(app, origins=Config.CORS_ORIGINS)
+    CORS(app)  # Adjust origins as needed
     
     # Initialize logging
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
-    logger = logging.getLogger(__name__)
     
     # Initialize services
-    logger.info("Initializing RAG services...")
+    from medibuddy.services import RAGService
     if not RAGService.initialize():
-        logger.error("Failed to initialize RAG services")
-        raise RuntimeError("Service initialization failed")
+        raise RuntimeError("Failed to initialize services")
     
     # Register routes
-    from .routes import init_routes
+    from medibuddy.routes import init_routes
     init_routes(app)
     
     return app

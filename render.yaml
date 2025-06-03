@@ -6,7 +6,7 @@ services:
       chmod +x scripts/setup.sh
       chmod +x scripts/build.sh
       ./scripts/build.sh
-    startCommand: gunicorn wsgi:app  # Updated this line
+    startCommand:  gunicorn --bind 0.0.0.0:10000 --workers 4 --timeout 120 wsgi:app  # Updated this line
     envVars:
       - key: HF_TOKEN
         fromGroup: hf_token

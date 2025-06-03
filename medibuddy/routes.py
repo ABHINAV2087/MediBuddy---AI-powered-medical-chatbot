@@ -25,17 +25,29 @@ def init_routes(app):
         })
 
     @app.route('/api/chat', methods=['POST'])
+    @validate_request(required_fields=['message'])
     def chat():
-        # Validate request
-        validation = validate_request(request)
-        if not validation['success']:
-            return jsonify(validation), 400
-
         data = request.get_json()
         user_question = data['message'].strip()
         session_id = data.get('session_id', str(uuid.uuid4()))
         max_sources = min(int(data.get('max_sources', Config.MAX_SOURCES)), 10)
         include_sources = data.get('include_sources', True)
+
+        # Additional validation for empty message
+        if not user_question:
+            return jsonify({
+                'success': False,
+                'error': 'Message cannot be empty',
+                'error_code': 'EMPTY_MESSAGE'
+            }), 400
+
+        # Check if services are initialized
+        if not RAGService.is_initialized:
+            return jsonify({
+                'success': False,
+                'error': 'RAG service is not initialized',
+                'error_code': 'SERVICE_NOT_READY'
+            }), 503
 
         try:
             # Create QA chain

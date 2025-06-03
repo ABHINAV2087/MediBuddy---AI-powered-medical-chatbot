@@ -5,6 +5,9 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import PromptTemplate
 from typing import Optional, Dict, Any
 
+# Add this import - adjust the path based on your project structure
+from medibuddy.config import Config  # or wherever your Config class is defined
+
 logger = logging.getLogger(__name__)
 
 class RAGService:
