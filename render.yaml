@@ -6,7 +6,7 @@ services:
       chmod +x scripts/setup.sh
       chmod +x scripts/build.sh
       ./scripts/build.sh
-    startCommand: gunicorn app:app
+    startCommand: gunicorn wsgi:app
     envVars:
       - key: HF_TOKEN
         fromGroup: hf_token
@@ -18,4 +18,3 @@ services:
         value: sentence-transformers/all-MiniLM-L6-v2
       - key: CORS_ORIGINS
         value: https://your-mern-app.onrender.com,http://localhost:3000
-    plan: free

@@ -1,8 +1,8 @@
 from flask import Flask
 from flask_cors import CORS
-import logging
 from .config import Config
 from .services import RAGService
+import logging
 
 def create_app():
     app = Flask(__name__)
