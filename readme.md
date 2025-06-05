@@ -20,6 +20,15 @@
 
 ---
 
+## Preview
+
+![alt text](medibuddy-demo.png)
+![alt text](medibuddy-demo2.png)
+![alt text](medibuddy-demo3.png)
+![alt text](medibuddy-demo4.png)
+### No hallucinations ... gives results only on the medical contexts
+![alt text](medibuddy-demo5.png)
+
 ## 🧠 Tech Stack
 
 | Layer        | Technology                              |
