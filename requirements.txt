@@ -1,0 +1,12 @@
+flask
+flask-cors
+python-dotenv
+langchain
+langchain-community
+langchain-huggingface
+pinecone-client
+pypdf
+sentence-transformers
+transformers
+torch
+numpy
