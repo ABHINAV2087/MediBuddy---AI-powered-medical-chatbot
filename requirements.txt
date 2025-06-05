@@ -4,7 +4,7 @@ python-dotenv
 langchain
 langchain-community
 langchain-huggingface
-pinecone-client
+pinecone
 pypdf
 sentence-transformers
 transformers
