@@ -18,17 +18,13 @@ class PineconeVectorStore:
         self.vectorstore = None
         
     def initialize_index(self):
-        """Initialize or connect to Pinecone index"""
         try:
-            # Get list of existing indexes
             existing_indexes = [index.name for index in self.pc.list_indexes()]
             
-            # Check if index exists
             if self.config.PINECONE_INDEX_NAME not in existing_indexes:
-                # Create index if it doesn't exist
                 self.pc.create_index(
                     name=self.config.PINECONE_INDEX_NAME,
-                    dimension=384,  # Dimension for all-MiniLM-L6-v2
+                    dimension=384,
                     metric='cosine',
                     spec=ServerlessSpec(
                         cloud='aws',
@@ -36,12 +32,9 @@ class PineconeVectorStore:
                     )
                 )
                 print(f"Created new index: {self.config.PINECONE_INDEX_NAME}")
-                
-                # Wait for index to be ready
                 print("Waiting for index to be ready...")
                 time.sleep(10)
             
-            # Connect to index
             self.index = self.pc.Index(self.config.PINECONE_INDEX_NAME)
             print(f"Connected to index: {self.config.PINECONE_INDEX_NAME}")
             
@@ -50,7 +43,6 @@ class PineconeVectorStore:
             raise e
     
     def load_documents(self, data_path="data/"):
-        """Load PDF documents from directory"""
         try:
             if not os.path.exists(data_path):
                 print(f"Data directory {data_path} does not exist")
@@ -69,7 +61,6 @@ class PineconeVectorStore:
             return []
     
     def create_chunks(self, documents):
-        """Split documents into chunks"""
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.config.CHUNK_SIZE,
             chunk_overlap=self.config.CHUNK_OVERLAP
@@ -79,7 +70,6 @@ class PineconeVectorStore:
         return chunks
     
     def create_vectorstore(self, documents):
-        """Create vector store from documents"""
         try:
             chunks = self.create_chunks(documents)
             
@@ -87,7 +77,6 @@ class PineconeVectorStore:
                 print("No chunks created from documents")
                 return False
             
-            # Create Langchain Pinecone vectorstore
             self.vectorstore = LangchainPinecone.from_documents(
                 documents=chunks,
                 embedding=self.embedding_model,
@@ -101,10 +90,8 @@ class PineconeVectorStore:
             return False
     
     def get_vectorstore(self):
-        """Get existing vector store"""
         if self.vectorstore is None:
             try:
-                # Check if index has any vectors
                 index_stats = self.index.describe_index_stats()
                 total_vector_count = index_stats.get('total_vector_count', 0)
                 
@@ -124,7 +111,6 @@ class PineconeVectorStore:
         return self.vectorstore
     
     def setup_complete_pipeline(self, data_path="data/"):
-        """Complete setup pipeline: load docs, create chunks, create vectorstore"""
         try:
             self.initialize_index()
             documents = self.load_documents(data_path)

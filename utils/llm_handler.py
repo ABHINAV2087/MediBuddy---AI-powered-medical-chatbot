@@ -7,7 +7,6 @@ from config import Config
 import logging
 from typing import Dict, Any, List, Optional
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -19,11 +18,6 @@ class LLMHandler:
         self.initialized = False
         
     def load_llm(self) -> bool:
-        """Initialize the LLM with HuggingFace
-        
-        Returns:
-            bool: True if initialization was successful, False otherwise
-        """
         try:
             if not self.config.HF_TOKEN:
                 logger.error("HuggingFace token not configured")
@@ -31,19 +25,17 @@ class LLMHandler:
 
             logger.info(f"Initializing LLM with model: {self.config.HUGGINGFACE_REPO_ID}")
             
-            # Option 1: Try with ChatHuggingFace for conversational models
             try:
                 base_llm = HuggingFaceEndpoint(
                     repo_id=self.config.HUGGINGFACE_REPO_ID,
                     temperature=self.config.TEMPERATURE,
                     huggingfacehub_api_token=self.config.HF_TOKEN,
                     timeout=60,
-                    task="conversational"  # Specify the correct task
+                    task="conversational"
                 )
                 
                 self.llm = ChatHuggingFace(llm=base_llm)
                 
-                # Test the connection
                 test_response = self.llm.invoke([HumanMessage(content="Hello")])
                 if not test_response:
                     raise ValueError("Empty response from LLM")
@@ -54,7 +46,6 @@ class LLMHandler:
             except Exception as e:
                 logger.warning(f"ChatHuggingFace initialization failed: {str(e)}")
                 
-            # Option 2: Try with a text-generation compatible model
             text_gen_models = [
                 "microsoft/DialoGPT-medium",
                 "google/flan-t5-base",
@@ -72,13 +63,11 @@ class LLMHandler:
                         max_new_tokens=self.config.MAX_LENGTH
                     )
                     
-                    # Test the connection
                     test_response = self.llm.invoke("Hello")
                     if not test_response:
                         raise ValueError("Empty response from LLM")
                     
                     logger.info(f"LLM initialized successfully with model: {model}")
-                    # Update config to remember working model
                     self.config.HUGGINGFACE_REPO_ID = model
                     return True
                     
@@ -94,11 +83,6 @@ class LLMHandler:
             return False
     
     def create_custom_prompt(self) -> PromptTemplate:
-        """Create custom prompt template for medical QA
-        
-        Returns:
-            PromptTemplate: Configured prompt template
-        """
         template = """
         You are a medical assistant chatbot. Use the pieces of information provided in the context to answer the user's medical question.
         
@@ -122,14 +106,6 @@ class LLMHandler:
         )
     
     def create_qa_chain(self, vectorstore: Any) -> bool:
-        """Create QA chain with retriever
-        
-        Args:
-            vectorstore: Initialized vector store for document retrieval
-            
-        Returns:
-            bool: True if chain creation was successful, False otherwise
-        """
         try:
             if not self.load_llm():
                 raise Exception("Failed to load LLM")
@@ -167,14 +143,6 @@ class LLMHandler:
             return False
     
     def get_response(self, query: str) -> Dict[str, Any]:
-        """Get response for a query with enhanced error handling
-        
-        Args:
-            query: User's question
-            
-        Returns:
-            dict: Response containing answer, sources, and error information
-        """
         try:
             if not self.initialized or not self.qa_chain:
                 return {
@@ -194,7 +162,6 @@ class LLMHandler:
             
             response = self.qa_chain.invoke({'query': query})
             
-            # Process source documents
             sources = []
             if response.get("source_documents"):
                 for doc in response["source_documents"]:
@@ -220,9 +187,4 @@ class LLMHandler:
             }
 
     def is_initialized(self) -> bool:
-        """Check if the handler is ready to process queries
-        
-        Returns:
-            bool: True if initialized and ready, False otherwise
-        """
         return self.initialized

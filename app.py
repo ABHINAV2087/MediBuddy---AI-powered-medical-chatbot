@@ -6,22 +6,16 @@ from utils.llm_handler import LLMHandler
 from config import Config
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for MERN integration
+CORS(app)
 
-# Global variables
 vector_store = None
 llm_handler = None
 config = Config()
 
 def initialize_chatbot():
-    """Initialize the chatbot components"""
     global vector_store, llm_handler
-    
     try:
-        # Initialize vector store
         vector_store = PineconeVectorStore()
-        
-        # Check if we need to setup the pipeline (first time)
         setup_required = os.getenv('SETUP_PIPELINE', 'false').lower() == 'true'
         
         if setup_required:
@@ -32,12 +26,10 @@ def initialize_chatbot():
         else:
             vector_store.initialize_index()
         
-        # Get vectorstore
         vectorstore = vector_store.get_vectorstore()
         if vectorstore is None:
             raise Exception("Failed to get vector store")
         
-        # Initialize LLM handler
         llm_handler = LLMHandler()
         success = llm_handler.create_qa_chain(vectorstore)
         if not success:
@@ -52,7 +44,6 @@ def initialize_chatbot():
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
     return jsonify({
         "status": "healthy",
         "message": "Medical Chatbot API is running"
@@ -60,9 +51,7 @@ def health_check():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    """Main chat endpoint"""
     try:
-        # Get query from request
         data = request.get_json()
         
         if not data or 'query' not in data:
@@ -81,7 +70,6 @@ def chat():
                 "sources": []
             }), 400
         
-        # Check if chatbot is initialized
         if not llm_handler:
             return jsonify({
                 "error": "Chatbot not initialized",
@@ -89,7 +77,6 @@ def chat():
                 "sources": []
             }), 500
         
-        # Get response
         response = llm_handler.get_response(query)
         
         if response["error"]:
@@ -111,7 +98,6 @@ def chat():
 
 @app.route('/status', methods=['GET'])
 def get_status():
-    """Get chatbot status"""
     return jsonify({
         "initialized": llm_handler is not None,
         "vector_store_connected": vector_store is not None,
@@ -120,15 +106,12 @@ def get_status():
 
 if __name__ == '__main__':
     print("Starting Medical Chatbot API...")
-    
-    # Initialize chatbot
     success = initialize_chatbot()
     
     if not success:
         print("Failed to initialize chatbot. Check your configuration.")
         exit(1)
     
-    # Run Flask app
     app.run(
         host='0.0.0.0',
         port=int(os.environ.get('PORT', 5000)),
